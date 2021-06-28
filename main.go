@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -196,6 +197,10 @@ func newPutCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			force, err := cmd.Flags().GetBool("force")
+			if err != nil {
+				return err
+			}
 
 			return db.Update(func(tx *bolt.Tx) error {
 				b := tx.Bucket([]byte(bucket))
@@ -205,13 +210,32 @@ func newPutCmd() *cobra.Command {
 						return err
 					}
 				}
-				return b.Put([]byte(key), []byte(value))
+				previousValue := b.Get([]byte(key))
+				if len(previousValue) != 0 && !force {
+					fmt.Fprintf(os.Stderr, "Do you want to override the existing value [y/n]?")
+					var result string
+					_, err = fmt.Scanf("%s", &result)
+					if err != nil {
+						return err
+					}
+					switch result {
+					case "y", "Y":
+						return b.Put([]byte(key), []byte(value))
+					case "n", "N":
+						return nil
+					default:
+						return errors.New("invalid choice")
+					}
+				} else {
+					return b.Put([]byte(key), []byte(value))
+				}
 			})
 		},
 	}
 	putCmd.Flags().StringP("key", "k", "", "key")
 	putCmd.Flags().StringP("value", "v", "", "value")
 	putCmd.Flags().StringP("bucket", "b", "default", "bucket")
+	putCmd.Flags().BoolP("force", "f", false, "allow override existing value")
 	return putCmd
 
 }
