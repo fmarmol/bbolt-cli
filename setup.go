@@ -31,7 +31,7 @@ func InstallBBolt() error {
 		}
 	}
 	dbPath := os.ExpandEnv(DefaultDBPath)
-	perm := permos.Perm{UserRead: true}
+	perm := permos.Perm{UserRead: true, UserWrite: true, UserExec: true}
 	db, err := bolt.Open(dbPath, perm.FileMode(), nil)
 	if err != nil {
 		return err

@@ -44,6 +44,33 @@ func newListBucketsCmd() *cobra.Command {
 	return listBucketCmd
 }
 
+func newDeleteBucketCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "delete-bucket",
+		Short: "delete a bucket",
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			perm := permos.Perm{UserRead: true}
+			dbPath := os.ExpandEnv(DefaultDBPath)
+			db, err := bolt.Open(dbPath, perm.FileMode(), nil)
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+			bucket, err := cmd.Flags().GetString("bucket")
+			if err != nil {
+				return err
+			}
+
+			return db.Update(func(tx *bolt.Tx) error {
+				return tx.DeleteBucket([]byte(bucket))
+			})
+		},
+	}
+	cmd.Flags().StringP("bucket", "b", "", "bucket")
+	return cmd
+}
+
 func newListKeysBucketCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "list-keys",
@@ -262,6 +289,7 @@ func main() {
 	root.AddCommand(newGetCmd())
 	root.AddCommand(newDeleteCmd())
 	root.AddCommand(newListBucketsCmd())
+	root.AddCommand(newDeleteBucketCmd())
 
 	bucketCmd := newBucketCmd()
 	bucketCmd.AddCommand(newListKeysBucketCmd())
